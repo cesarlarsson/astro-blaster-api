@@ -3,10 +3,7 @@ name: Deploy to Firebase
 on:
   push:
     branches:
-      - main
-  pull_request:
-    branches:
-      - main
+      - master
 
 jobs:
   build-and-deploy:
@@ -27,10 +24,7 @@ jobs:
       - name: Build functions
         run: cd functions && npm run build
 
-      - name: Deploy to Firebase
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
-          projectId: astro-blaster-api
-          channelId: live
+      - name: Deploy to Firebase Functions
+        run: |
+          npm install -g firebase-tools
+          firebase deploy --only functions --token "${{ secrets.FIREBASE_TOKEN }}" --non-interactive
