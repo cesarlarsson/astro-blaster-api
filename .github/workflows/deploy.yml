@@ -19,10 +19,10 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: cd functions && npm ci
+        run: npm ci
 
       - name: Build functions
-        run: cd functions && npm run build
+        run: npm run build
 
       - name: Create service account file
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > $HOME/firebase-service-account.json
