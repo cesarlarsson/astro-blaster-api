@@ -154,4 +154,21 @@ Para probar localmente:
 
 ## CI/CD
 
-El proyecto incluye GitHub Actions para desplegar automáticamente al hacer push/merge a `main`. Configura el secret `FIREBASE_SERVICE_ACCOUNT` en GitHub con la key JSON de Firebase.
+El proyecto incluye GitHub Actions para desplegar automáticamente al hacer push/merge a `master`.
+
+### Configuración de GitHub Actions
+
+1. **Obtén la Service Account de Firebase**:
+   - Ve a [Firebase Console](https://console.firebase.google.com/) → Configuración del proyecto → Cuentas de servicio
+   - Haz clic en "Generar nueva clave privada"
+   - Descarga el archivo JSON
+
+2. **Configura el secret en GitHub**:
+   - Ve a tu repositorio en GitHub → Settings → Secrets and variables → Actions
+   - Crea un nuevo secret llamado `FIREBASE_SERVICE_ACCOUNT`
+   - Pega todo el contenido del archivo JSON descargado
+
+3. **Workflow de deploy**:
+   - Se ejecuta automáticamente al hacer push a la rama `master`
+   - Instala dependencias, compila TypeScript y despliega las functions
+   - Revisa el estado en la pestaña "Actions" de tu repositorio
