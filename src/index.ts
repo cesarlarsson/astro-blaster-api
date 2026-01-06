@@ -2,16 +2,35 @@ import { onRequest } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import express from 'express';
+import * as crypto from 'crypto';
 
 admin.initializeApp();
 
 const app = express();
 app.use(express.json());
 
-// Submit or update score (sin auth, usa userId del body)
+// Clave secreta (debe coincidir con Godot)
+const SECRET_KEY = 'AstroBlaster_SecureKey_2026_v1';
+const MAX_TIMESTAMP_DIFF = 300; // 5 minutos en segundos
+
+// Generar firma HMAC
+function generateSignature(userId: string, userName: string, score: number, timestamp: number): string {
+  const data = `${userId}|${userName}|${score}|${timestamp}`;
+  const hmacInput = data + SECRET_KEY;
+  return crypto.createHash('sha256').update(hmacInput).digest('hex');
+}
+
+// Validar timestamp para prevenir replay attacks
+function isValidTimestamp(timestamp: number): boolean {
+  const currentTime = Math.floor(Date.now() / 1000);
+  const diff = Math.abs(currentTime - timestamp);
+  return diff <= MAX_TIMESTAMP_DIFF;
+}
+
+// Submit or update score (con validación HMAC)
 app.post('/score', async (req: express.Request, res: express.Response): Promise<void> => {
   console.log('Received POST /score:', req.body);
-  const { score, userId, userName } = req.body;
+  const { score, userId, userName, timestamp, signature } = req.body;
 
   // Validar inputs
   if (typeof score !== 'number' || score < 0 || score > 1000000) {
@@ -24,7 +43,33 @@ app.post('/score', async (req: express.Request, res: express.Response): Promise<
     res.status(400).send('Invalid userId');
     return;
   }
+  if (!timestamp || typeof timestamp !== 'number') {
+    console.log('Invalid timestamp:', timestamp);
+    res.status(400).send('Invalid timestamp');
+    return;
+  }
+  if (!signature || typeof signature !== 'string') {
+    console.log('Missing signature');
+    res.status(400).send('Missing signature');
+    return;
+  }
+
+  // Validar timestamp (prevenir replay attacks)
+  if (!isValidTimestamp(timestamp)) {
+    console.log('Timestamp expired or invalid:', timestamp);
+    res.status(401).send('Request expired');
+    return;
+  }
+
   const name = userName || 'Anonymous';
+
+  // Verificar firma HMAC
+  const expectedSignature = generateSignature(userId, name, score, timestamp);
+  if (signature !== expectedSignature) {
+    console.log('Invalid signature. Expected:', expectedSignature, 'Got:', signature);
+    res.status(401).send('Invalid signature');
+    return;
+  }
 
   try {
     const docRef = admin.firestore().collection('scores').doc(userId);
